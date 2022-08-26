@@ -1,1 +1,1 @@
-# Learning Earthquakes Sources using Symmetric Autoencoders
+# Learning Earthquake Sources using Symmetric Autoencoders
