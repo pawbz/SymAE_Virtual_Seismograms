@@ -26,6 +26,7 @@ begin
     using JLD2
     using Healpix
     using HDF5
+	using StatsBase
     using FileIO
     using NumericalIntegration
 end
@@ -35,6 +36,9 @@ eqdata = DataFrame(CSV.File("data/events_list_12_oct.csv"))
 
 # ╔═╡ 332688ba-28d2-4f3d-b445-6d21fe22d8b5
 stf = h5open("data/stf_virtual_syn_12_oct.hdf5");
+
+# ╔═╡ ec520726-81b6-451b-a021-5413ef13453a
+spec = h5open("data/all_spectras_2.0.hdf5");
 
 # ╔═╡ eb6a8998-5de8-4023-9669-59807042f4cb
 md"""
@@ -57,14 +61,24 @@ MultiCheckBox(eqdata[!, "Code"], default=["okt1"])
     """
 end
 
-# ╔═╡ 5b65dc66-7e18-4f0e-bd4b-8b94100b332a
-@bind flow Slider(range(0, stop=1, length=100), show_value=true, default=0.24)
+# ╔═╡ b7b20eba-b956-42e6-9c65-77feed77b218
+function get_err(a,b)
+err = broadcast(a,b) do aa, bb
+	msd(aa,bb)
+end
+i=sortperm(err)
+err = err[i]
+return err, eqdata[!, "Code"][i]
+end
 
 # ╔═╡ 1be07d95-c5f2-46fa-8d8a-f87571cb7b24
 tgrid = range(-200, stop=200, length=801)
 
 # ╔═╡ e7c83f23-9596-422a-91fc-652be0cfd73f
 freqgrid = collect(rfftfreq(length(tgrid), inv(step(tgrid))))
+
+# ╔═╡ 5b65dc66-7e18-4f0e-bd4b-8b94100b332a
+@bind flow Slider(freqgrid, show_value=true, default=0.24)
 
 # ╔═╡ 9b0ea5fc-87b8-4dca-af4a-aed203cc4e9c
 function window(s)
@@ -76,6 +90,48 @@ function normalize(s)
     sstd = std(s)
     return s ./ sstd
 end
+
+# ╔═╡ 91653674-7447-49fb-a79a-84180e6cb03e
+function get_all_spectra(name)
+s=broadcast(eqdata[!, "Code"]) do eq
+	broadcast(keys(spec[eq])) do bin
+		collect(spec[eq][bin][name]) |> normalize
+end
+end
+s = broadcast(s) do ss
+	hcat(ss...)
+end
+	return s
+end
+
+
+
+# ╔═╡ 0d1a1ba1-1a56-4ddb-8a07-84343220d245
+spec_onepath = get_all_spectra("spectra_syn_onepath")
+
+# ╔═╡ 2173d092-c7b8-4b2e-a13e-873d4133ca24
+spec_allpath = get_all_spectra("stacked_spectra_realpath")
+
+# ╔═╡ 55ba3811-fd00-4110-9f4f-9b5913142820
+spec_err1, eq1 = get_err(spec_onepath,spec_allpath)
+
+# ╔═╡ f60d0fc3-9752-4bf1-ba2d-487455414969
+plot(scatter(x=eq1,y=spec_err1), Layout(title="Mean-squared error b/w _onepath_ and _all path_ virtual spectrum"))
+
+# ╔═╡ 62f3fab0-3b45-4fb4-9327-97a224a1d69b
+spec_rawpath = get_all_spectra("stacked_spectra_raw")
+
+# ╔═╡ 863aa7cb-9c03-4b66-ba23-5e070529ce59
+spec_err2, eq2 = get_err(spec_rawpath,spec_allpath)
+
+# ╔═╡ 1b7e27b8-f992-4d99-af66-732c42682158
+plot(scatter(x=eq2,y=spec_err2), Layout(title="Mean-squared error b/w _raw path_ and _all path_ virtual spectrum"))
+
+# ╔═╡ 47479c38-8ad4-4bdd-9064-6c3ddd401d50
+spec_err3, eq3 = get_err(spec_rawpath,spec_onepath)
+
+# ╔═╡ 1ca0ec42-ffb0-4880-89ea-267e9f2c2ad2
+plot(scatter(x=eq3,y=spec_err3), Layout(title="Mean-squared error b/w _raw path_ and _one path_ virtual spectrum"))
 
 # ╔═╡ b9c71123-0c0a-47d1-9dd3-3cda5fcdd7ff
 function integrate(s)
@@ -103,37 +159,46 @@ end
 # ╔═╡ e7f6daa9-9d66-493f-8d6f-d7d8cccc5dd2
 @warn "Note that there is a difference between python and julia bin healpix indexing."
 
-# ╔═╡ 9f893b60-98c5-4559-9de8-ead952c25092
-function plot_stf(ieq)
+# ╔═╡ 8aa9387e-c36e-41b3-a45d-e5baeb2b1578
+function plot_spec(ieq, name="spectra_syn_onepath")
     bins1 = bins[ieq][sortperm(parse.(Int, bins[ieq]))]
     bin_indices = broadcast(x -> parse(Int, x), bins1)
     scatter_plots = map(bin_indices) do bin
         angles = broadcast(pix2angRing(Resolution(4), bin + 1)) do x
             floor(Int, rad2deg(x))
         end
-        s = collect(stf[eq_names[ieq]][string(bin)]["virtual_seis"])
-        sout = get_stf(s)
-        return scatter(x=tgrid, y=sout .+ (10 * (bin - minimum(bin_indices))), fill="tonexty", name=bin, text=vcat(fill(nothing, 50), string("    ", angles), fill(nothing, 800)), mode="lines+text", textposition="top",
+        s = collect(spec[eq_names[ieq]][string(bin)][name]) |> normalize
+        
+        return scatter(x=freqgrid, y=s, name=bin,
             legendgrouptitle_text=eq_names[ieq])
     end
     p = plot(scatter_plots, Layout(
-        width=500, height=200 + 20 * length(bins1),
+        width=700, height=400,
         xaxis_title="Time Relative to PREM P (s)",
         template="none",
-        yaxis_showgrid=false,
+		xaxis_range=[-2, 0],
+		yaxis_range=[-2, 1.5],
+		yaxis_type="log",
+		xaxis_type="log",
         xaxis=attr(
-            tickfont=attr(size=15), nticks=20,
+            tickfont=attr(size=15), nticks=10,
             gridwidth=1, gridcolor="Gray"
             # scaleanchor = "x",
             # scaleratio = 1,
         ),
-        yaxis=attr(showticklabels=false,),
+        yaxis=attr(),
         legend_title="Second Group Title",
     ))
 end
 
-# ╔═╡ 677ab4cf-b461-4974-9f14-fc5fe748341f
-plot_stf(1)
+# ╔═╡ 962bc72e-ad41-4abe-91eb-4055d5e2dec7
+plot_spec(1, "spectra_syn_onepath" )
+
+# ╔═╡ ffc6b01d-820d-44b4-b260-5a37be0c0cc1
+plot_spec(1, "stacked_spectra_raw")
+
+# ╔═╡ 8f7ea00c-4f8c-464d-b576-d60987ddff62
+plot_spec(1, "stacked_spectra_realpath")
 
 # ╔═╡ 5788e16a-3bd4-4b9f-8929-b9e06a30b6f2
 bins[1][sortperm(parse.(Int, bins[1]))]
@@ -163,6 +228,22 @@ pix2angRing(Resolution(4), 192)
 
 # ╔═╡ 43ef5993-f80b-4d60-bd4c-c2060f481684
 pix2angRing(Resolution(4), 192)
+
+# ╔═╡ 317001fb-12b0-4d61-b417-3bea0d1eb7a8
+function plot_spectra()
+    f = Figure()
+    tgrid = range(-200, stop=200, length=801)
+
+    Axis(f[1, 1], yscale=log10, xscale=log10)
+
+    xs = rfftfreq(length(tgrid), inv(step(tgrid)))[2:end]
+    for eq in eq_names, ii in i
+        lines!(xs, spec[eq][ii][2:end], label=string(eq, " bin ", ii), linewidth=3)
+    end
+    axislegend(; position=:rt)
+    limits!(0.01, 1, 0.1, 1000) # x1, x2, y1, y2
+    f
+end
 
 # ╔═╡ f7f756b6-ffa1-4c76-b82a-dd44134a0596
 begin
@@ -207,6 +288,7 @@ NumericalIntegration = "e7bfaba1-d571-5449-8927-abc22e82249b"
 PlutoPlotly = "8e989ff0-3d88-8e9f-f020-2b208a939ff0"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 CSV = "~0.10.4"
@@ -220,6 +302,7 @@ JLD2 = "~0.4.22"
 NumericalIntegration = "~0.3.3"
 PlutoPlotly = "~0.3.6"
 PlutoUI = "~0.7.39"
+StatsBase = "~0.33.21"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -228,7 +311,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "f59893a8e11bd68db1efe651c6fd5bb7f9cc0c22"
+project_hash = "d0ea03ba178c4cd08be5e30f73bfbe2f62770363"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -807,6 +890,18 @@ version = "1.4.0"
 deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
+[[deps.StatsAPI]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "f9af7f195fb13589dd2e2d57fdb401717d2eb1f6"
+uuid = "82ae8749-77ed-4fe6-ae5f-f523153014b0"
+version = "1.5.0"
+
+[[deps.StatsBase]]
+deps = ["DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
+git-tree-sha1 = "d1bf48bfcc554a3761a133fe3a9bb01488e06916"
+uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+version = "0.33.21"
+
 [[deps.TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
@@ -904,10 +999,24 @@ version = "17.4.0+0"
 # ╔═╡ Cell order:
 # ╠═bdf059d4-da94-4799-ac2d-cafe847f854a
 # ╠═332688ba-28d2-4f3d-b445-6d21fe22d8b5
-# ╟─eb6a8998-5de8-4023-9669-59807042f4cb
+# ╠═ec520726-81b6-451b-a021-5413ef13453a
+# ╠═eb6a8998-5de8-4023-9669-59807042f4cb
 # ╠═9d5e12da-2f4b-4896-b8ac-ba9e9577f3b6
 # ╠═5b65dc66-7e18-4f0e-bd4b-8b94100b332a
-# ╠═677ab4cf-b461-4974-9f14-fc5fe748341f
+# ╠═91653674-7447-49fb-a79a-84180e6cb03e
+# ╠═0d1a1ba1-1a56-4ddb-8a07-84343220d245
+# ╠═2173d092-c7b8-4b2e-a13e-873d4133ca24
+# ╠═62f3fab0-3b45-4fb4-9327-97a224a1d69b
+# ╠═b7b20eba-b956-42e6-9c65-77feed77b218
+# ╠═55ba3811-fd00-4110-9f4f-9b5913142820
+# ╠═863aa7cb-9c03-4b66-ba23-5e070529ce59
+# ╠═47479c38-8ad4-4bdd-9064-6c3ddd401d50
+# ╠═f60d0fc3-9752-4bf1-ba2d-487455414969
+# ╠═1b7e27b8-f992-4d99-af66-732c42682158
+# ╠═1ca0ec42-ffb0-4880-89ea-267e9f2c2ad2
+# ╠═962bc72e-ad41-4abe-91eb-4055d5e2dec7
+# ╠═ffc6b01d-820d-44b4-b260-5a37be0c0cc1
+# ╠═8f7ea00c-4f8c-464d-b576-d60987ddff62
 # ╠═1be07d95-c5f2-46fa-8d8a-f87571cb7b24
 # ╠═e7c83f23-9596-422a-91fc-652be0cfd73f
 # ╠═9b0ea5fc-87b8-4dca-af4a-aed203cc4e9c
@@ -917,7 +1026,7 @@ version = "17.4.0+0"
 # ╠═f2e08b0e-d1ce-498e-8a0e-78f7c6857aff
 # ╠═b42e13af-309e-4938-a03f-fb913bb747c0
 # ╟─e7f6daa9-9d66-493f-8d6f-d7d8cccc5dd2
-# ╠═9f893b60-98c5-4559-9de8-ead952c25092
+# ╠═8aa9387e-c36e-41b3-a45d-e5baeb2b1578
 # ╠═5788e16a-3bd4-4b9f-8929-b9e06a30b6f2
 # ╠═33c409e5-df66-45bf-8eb4-5d3a52f99be9
 # ╠═a6f8585e-b3f7-42f4-b638-5821350c387e
@@ -925,6 +1034,7 @@ version = "17.4.0+0"
 # ╠═71ffaefe-2441-11ed-24a9-5d47d1677675
 # ╠═74f22f41-769d-4eb2-98b0-e3891dda4701
 # ╠═43ef5993-f80b-4d60-bd4c-c2060f481684
+# ╠═317001fb-12b0-4d61-b417-3bea0d1eb7a8
 # ╠═f7f756b6-ffa1-4c76-b82a-dd44134a0596
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
