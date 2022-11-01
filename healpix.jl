@@ -11,6 +11,13 @@ begin
 	plotly()
 end
 
+# ╔═╡ 2bc8bc2d-ac93-43bd-bbc7-fbca0a8cef18
+
+df = CSV.File(
+    HTTP.get( "https://raw.githubusercontent.com/plotly/datasets/master/volcano_db.csv").body
+) |> DataFrame
+
+
 # ╔═╡ cb3c9b30-bf78-452d-ab4b-935b05347351
 md"""
 [see](https://github.com/ziotom78/Healpix.jl/blob/26798c25be0a7440ab1fc27606e0277badf13854/src/projections.jl)
@@ -1075,6 +1082,7 @@ version = "1.4.1+0"
 
 # ╔═╡ Cell order:
 # ╠═a52932e4-5751-11ed-0f7f-81350a818436
+# ╠═2bc8bc2d-ac93-43bd-bbc7-fbca0a8cef18
 # ╠═cb3c9b30-bf78-452d-ab4b-935b05347351
 # ╠═956b7f6a-9188-4562-9c94-d8df6fcf9a65
 # ╠═af21aef9-e454-409b-827a-7337f576e0b6

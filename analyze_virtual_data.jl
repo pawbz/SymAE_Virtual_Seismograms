@@ -17,7 +17,6 @@ end
 # ╔═╡ 71ffaefe-2441-11ed-24a9-5d47d1677675
 begin
     using PlutoPlotly
-	using PlotlyKaleido
     using FFTW
     using PlutoUI
     using CSV
@@ -25,52 +24,64 @@ begin
     using DSP
     using Statistics
     using JLD2
-    using Healpix
     using HDF5
-    using FileIO
-    using NumericalIntegration
 end
 
-# ╔═╡ bdf059d4-da94-4799-ac2d-cafe847f854a
-eqdata = DataFrame(CSV.File("data/events_list_12_oct.csv"))
-
-# ╔═╡ 332688ba-28d2-4f3d-b445-6d21fe22d8b5
-stf = h5open("data/stf_virtual_syn_12_oct.hdf5");
-
-# ╔═╡ eb6a8998-5de8-4023-9669-59807042f4cb
+# ╔═╡ 01a81689-bcd2-400e-9495-fc6814517ff2
 md"""
-#### Select quakes
-$(@bind eq_names
-MultiCheckBox(eqdata[!, "Code"], default=["okt1"])
+# Redatuming to Generate Virtual Seismograms
+"""
+
+# ╔═╡ 11c32721-fe02-460b-9893-caf3b6b90d0d
+md"""
+* Dotted Seismograms are Real
+* Rest are Virtual
+"""
+
+# ╔═╡ 6ce3fbb4-2e7e-41b6-951a-1b4e3e40fe59
+md"""
+## Appendix
+"""
+
+# ╔═╡ 77ea52ba-b35b-49d5-b10d-4605505aa804
+fnames=["data7", "data124", "data94", "data176","data_synth"]
+
+# ╔═╡ a476f8c5-86f3-4095-ad91-f05e5fd56bcb
+data = broadcast(fnames) do d
+	DataFrame(CSV.File(string("data/vdata_v1/",d,".csv")))
+end;
+
+# ╔═╡ c2008296-86c0-4270-b455-c54b834a9c15
+path_names = ["From Chile To 1A.CORRE", "From Fiji To AU.KELC", "From Okhotsk To II.MSEY", "From Bonin To IC.HIA", "Synthetic PREM P Arrival"]
+
+# ╔═╡ bd626e67-9b83-4b15-a30f-e1360404b3cc
+md"""
+#### Select paths
+$(@bind selected_paths
+MultiCheckBox(path_names, default=["From Chile To 1A.CORRE", "Synthetic PREM P Arrival"], select_all=true, orientation=:column)
 )"""
 
-# ╔═╡ 9d5e12da-2f4b-4896-b8ac-ba9e9577f3b6
-@bind bins PlutoUI.combine() do Child
-    components = ["x", "y", "z"]
-    s = [md"""
-      earthquake: $eq $(
-      	Child(MultiCheckBox(keys(stf[eq]), select_all=true, default=keys(stf[eq])))
-      	)""" for eq in eq_names]
+# ╔═╡ 3e06fc95-5a5b-456a-8c12-eba22a57133e
+eq_full_names=Dict(["Chl1_8"=>"Chile; Bin 8; Mw 8.8; 2010", "Chl1_17"=>"Chile; Bin 17; Mw 8.8; 2010", "fij1_34"=>"Fiji; Bin 34; Mw 8.2; 2018","Hnd1_12"=>"Hindukush; Bin 12; Mw 7.5; 2015","Okt5_21"=>"Okhotsk; Bin 21; Mw 6.7; 2013","nzd_0"=>"New Zealand; Bin 0; Mw 7.8; 2016", "Bon1_70"=>"Bonin; Bin 70; Mw 7.8; 2015","Rat_4"=>"Rat Island; Bin 4; Mw 7.9; 2014", "Dnl_10"=>"Denali; Bin 10; Mw 7.9; 2002","Dnl_16"=>"Denali; Bin 16; Mw 7.9; 2002"])
 
-    md"""
-    #### Select Bins
-    $(s)
-    """
-end
+# ╔═╡ 264b13b3-d021-4058-bf87-b56834e0e0e4
+md"""
+#### Select quakes
+$(@bind selected_eq_names
+MultiCheckBox(collect(eq_full_names), default=["Chl1_8", "Okt5_21"], select_all=true)
+)"""
 
-# ╔═╡ 5b65dc66-7e18-4f0e-bd4b-8b94100b332a
-@bind flow Slider(range(0, stop=1, length=100), show_value=true, default=0.24)
+# ╔═╡ bdf059d4-da94-4799-ac2d-cafe847f854a
+eqdata = DataFrame(CSV.File("data/events_list_12_oct.csv"));
+
+# ╔═╡ ffbbebe4-85bb-4637-a247-64fcca6af185
+path_lat_long = [Dict("Lats"=>[-36.122, -67.5828], "Longs"=>[ -72.898, 144.275]), Dict("Lats"=>[-18.1125, -35.9791], "Longs"=>[-178.153, 136.9078]), Dict("Lats"=>[53.1995, -4.6737], "Longs"=>[152.7864, 55.4792]), Dict("Lats"=>[27.8386, 49.2704], "Longs"=>[140.4931, 119.7414])];
 
 # ╔═╡ 1be07d95-c5f2-46fa-8d8a-f87571cb7b24
-tgrid = range(-200, stop=200, length=801)
+tgrid = range(-200, stop=200, length=801);
 
 # ╔═╡ e7c83f23-9596-422a-91fc-652be0cfd73f
-freqgrid = collect(rfftfreq(length(tgrid), inv(step(tgrid))))
-
-# ╔═╡ 9b0ea5fc-87b8-4dca-af4a-aed203cc4e9c
-function window(s)
-    return DSP.Windows.tukey(length(s), 0.2) .* s
-end
+freqgrid = collect(rfftfreq(length(tgrid), inv(step(tgrid))));
 
 # ╔═╡ e708d208-1f32-4c91-91e1-779af992b443
 function normalize(s)
@@ -78,131 +89,61 @@ function normalize(s)
     return s ./ sstd
 end
 
-# ╔═╡ b9c71123-0c0a-47d1-9dd3-3cda5fcdd7ff
-function integrate(s)
-    return cumul_integrate(tgrid, s)
-end
-
-# ╔═╡ 945ed2b3-eec4-4002-9c69-e581407a6d6d
-function lowpass_filter(s)
-    responsetype = Lowpass(flow; fs=2)
-    designmethod = Butterworth(4)
-    return filtfilt(digitalfilter(responsetype, designmethod), s)
-end
-
-# ╔═╡ f2e08b0e-d1ce-498e-8a0e-78f7c6857aff
-function envelope(s)
-    return abs.(hilbert(s))
-end
-
-# ╔═╡ b42e13af-309e-4938-a03f-fb913bb747c0
-function get_stf(virtual_seismogram)
-	virtual_seismogram |> window |> lowpass_filter |> window |> normalize |> integrate |> window |> envelope
-end
-	
-
-# ╔═╡ e7f6daa9-9d66-493f-8d6f-d7d8cccc5dd2
-@warn "Note that there is a difference between python and julia bin healpix indexing."
-
 # ╔═╡ 9f893b60-98c5-4559-9de8-ead952c25092
-function plot_stf(ieq)
-    bins1 = bins[ieq][sortperm(parse.(Int, bins[ieq]))]
-    bin_indices = broadcast(x -> parse(Int, x), bins1)
-    scatter_plots = map(bin_indices) do bin
-        angles = broadcast(pix2angRing(Resolution(4), bin + 1)) do x
-            floor(Int, rad2deg(x))
-        end
-        s = collect(stf[eq_names[ieq]][string(bin)]["virtual_seis"])
-        sout = get_stf(s)
-        return scatter(x=tgrid, y=sout .+ (10 * (bin - minimum(bin_indices))), fill="tonexty", name=bin, text=vcat(fill(nothing, 50), string("    ", angles), fill(nothing, 800)), mode="lines+text", textposition="top",
-            legendgrouptitle_text=eq_names[ieq])
-    end
+function plot_seismograms()
+   scatter_plots = vec([(d=data[findall(x->x==pathn, path_names)[1]][!, eq]; scatter(x=tgrid, y=normalize(d[2:end]),
+	   legendgroup=eq,
+    legendgrouptitle_text=eq_full_names[eq],
+	   name=pathn, mode="lines", line=(iszero(d[1])) ? nothing : attr(dash="dot", width=3))) for eq in selected_eq_names, pathn in selected_paths])
+     
     p = plot(scatter_plots, Layout(
-        width=500, height=200 + 20 * length(bins1),
+		title="Real/Virtual Seismograms",
+		showlegend=true,
+		legend=attr(
+		orientation="v"
+),
+		xaxis_range=[-100, 200],
+        width=700, height=400,
         xaxis_title="Time Relative to PREM P (s)",
         template="none",
         yaxis_showgrid=false,
         xaxis=attr(
+			automargin=true,
             tickfont=attr(size=15), nticks=20,
             gridwidth=1, gridcolor="Gray"
             # scaleanchor = "x",
             # scaleratio = 1,
         ),
-        yaxis=attr(showticklabels=false,),
-        legend_title="Second Group Title",
+        yaxis=attr(showticklabels=false,automargin=true),
     ))
 end
 
-# ╔═╡ 677ab4cf-b461-4974-9f14-fc5fe748341f
-p=plot_stf(1)
+# ╔═╡ a4cf325a-41da-4462-b231-4931d2a8d453
+plot_seismograms()
 
-# ╔═╡ f64d33ad-0ad3-4565-a4d5-aa2344454537
-Kaleido.savefig(p.Plot, "plot1.png")
-
-# ╔═╡ 9901697f-b34c-4a04-97db-4dfb7629a48d
-PlotlyBase.to_image(p.Plot, format="png")
-
-# ╔═╡ 7c5b985f-70aa-4e7f-9d13-a05ef8dc64c4
-open("./example.png", "w") do io
-    PlotlyBase.to_image(p.Plot)
+# ╔═╡ 02ed416b-3f1a-45e0-82a7-84bcd52461ab
+function plot_scattergeo()
+	
+	p=plot(
+    [scattergeo(
+        lat=pll["Lats"],
+        lon=pll["Longs"],
+        mode="markers+lines",
+        hoverinfo="text",
+        showlegend=true,
+		name=path_names[i],
+		marker=attr(symbol=["star", "triangle-up"], size=10),
+        projection_type="orthographic",
+        landcolor="white",
+        oceancolor="MidnightBlue",
+        showocean=true,
+        lakecolor="LightBlue"
+	) for (i,pll) in enumerate(path_lat_long)],Layout(title="Earthquake-Receiver Paths"),
+)
 end
 
-# ╔═╡ 5788e16a-3bd4-4b9f-8929-b9e06a30b6f2
-bins[1][sortperm(parse.(Int, bins[1]))]
-
-# ╔═╡ 33c409e5-df66-45bf-8eb4-5d3a52f99be9
-bins
-
-# ╔═╡ a6f8585e-b3f7-42f4-b638-5821350c387e
-begin
-    fig = Figure()
-    ga = GeoAxis(
-        fig[1, 1]; # any cell of the figure's layout
-        dest="+proj=wintri", # the CRS in which you want to plot
-        coastlines=true # plot coastlines from Natural Earth, as a reference.
-    )
-    scatter!(ga, -120:15:120, -60:7.5:60; color=-60:7.5:60, strokecolor=(:black, 0.2))
-    fig
-end
-
-# ╔═╡ 6ce3fbb4-2e7e-41b6-951a-1b4e3e40fe59
-md"""
-## Appendix
-"""
-
-# ╔═╡ 74f22f41-769d-4eb2-98b0-e3891dda4701
-pix2angRing(Resolution(4), 192)
-
-# ╔═╡ 43ef5993-f80b-4d60-bd4c-c2060f481684
-pix2angRing(Resolution(4), 192)
-
-# ╔═╡ f7f756b6-ffa1-4c76-b82a-dd44134a0596
-begin
-    # isolate binindices from fnames as Int
-    binindices(fnames) =
-        broadcast(fnames) do f
-            parse(Int, split(splitext(f)[1], "_")[end])
-        end
-    # get binindices of a specific eq
-    binindices(fnames, eqname) = binindices(eqfiles(fnames, eqname))
-    # filter jld2 files of an eq
-    function eqfiles(fnames, eqname)
-        return filter(fnames) do f
-            occursin(string("/", eqname, "_"), f) && (splitext(f)[end] == ".jld2")
-        end
-    end
-    # give filename of a particular eq and index
-    function eqfiles(fnames, eqname, binindex)
-        f = filter(eqfiles(fnames, eqname)) do f
-            occursin(string("_", binindex, "."), f)
-        end
-        return first(f)
-    end
-    function load(eqname, binindex)
-        return vec(JLD2.load(joinpath("..", "data", eqfiles(data_files, eqname, binindex)), "data"))
-
-    end
-end
+# ╔═╡ ed2bf741-2064-4341-8885-b9343e6b4bf4
+plot_scattergeo()
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -211,12 +152,8 @@ CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
-FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
-Healpix = "9f4e344d-96bc-545a-84a3-ae6b9e1b672b"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
-NumericalIntegration = "e7bfaba1-d571-5449-8927-abc22e82249b"
-PlotlyKaleido = "f2990250-8cf9-495f-b13a-cce12b45703c"
 PlutoPlotly = "8e989ff0-3d88-8e9f-f020-2b208a939ff0"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
@@ -226,12 +163,8 @@ CSV = "~0.10.4"
 DSP = "~0.7.7"
 DataFrames = "~1.3.4"
 FFTW = "~1.5.0"
-FileIO = "~1.15.0"
 HDF5 = "~0.16.12"
-Healpix = "~4.1.2"
 JLD2 = "~0.4.22"
-NumericalIntegration = "~0.3.3"
-PlotlyKaleido = "~1.0.0"
 PlutoPlotly = "~0.3.6"
 PlutoUI = "~0.7.39"
 """
@@ -242,7 +175,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "4ba458f91782847637289e74c9e37ed81f5a5c13"
+project_hash = "2136007ca2177d5da4bacf0d84a3b3502743af92"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -256,12 +189,6 @@ git-tree-sha1 = "8eaf9f1b4921132a4cff3f36a1d9ba923b14a481"
 uuid = "6e696c72-6542-2067-7265-42206c756150"
 version = "1.1.4"
 
-[[deps.Adapt]]
-deps = ["LinearAlgebra"]
-git-tree-sha1 = "195c5505521008abea5aee4f96930717958eac6f"
-uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-version = "3.4.0"
-
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 version = "1.1.1"
@@ -269,26 +196,8 @@ version = "1.1.1"
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 
-[[deps.AxisAlgorithms]]
-deps = ["LinearAlgebra", "Random", "SparseArrays", "WoodburyMatrices"]
-git-tree-sha1 = "66771c8d21c8ff5e3a93379480a2307ac36863f7"
-uuid = "13072b0f-2c55-5437-9ae7-d433b7a33950"
-version = "1.0.1"
-
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
-
-[[deps.CFITSIO]]
-deps = ["CFITSIO_jll"]
-git-tree-sha1 = "8425c47db102577eefb93cb37b4480e750116b0d"
-uuid = "3b1b4be9-1499-4b22-8d78-7db3344d1961"
-version = "1.4.1"
-
-[[deps.CFITSIO_jll]]
-deps = ["Artifacts", "JLLWrappers", "LibCURL_jll", "Libdl", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "9c91a9358de42043c3101e3a29e60883345b0b39"
-uuid = "b3e40c51-02ae-5482-8a39-3ace5868dcf4"
-version = "4.0.0+0"
 
 [[deps.CSV]]
 deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings"]
@@ -460,12 +369,6 @@ git-tree-sha1 = "4cc2bb72df6ff40b055295fdef6d92955f9dede8"
 uuid = "0234f1f7-429e-5d53-9886-15a909be8d59"
 version = "1.12.2+2"
 
-[[deps.Healpix]]
-deps = ["CFITSIO", "LazyArtifacts", "Libsharp", "LinearAlgebra", "Pkg", "Printf", "RecipesBase", "StaticArrays", "Test"]
-git-tree-sha1 = "ca9690ae0c58fa8627a01049a949867ffb8e7d15"
-uuid = "9f4e344d-96bc-545a-84a3-ae6b9e1b672b"
-version = "4.1.2"
-
 [[deps.Hyperscript]]
 deps = ["Test"]
 git-tree-sha1 = "8d511d5b81240fc8e6802386302675bdf47737b9"
@@ -499,12 +402,6 @@ version = "2018.0.3+2"
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
-
-[[deps.Interpolations]]
-deps = ["AxisAlgorithms", "ChainRulesCore", "LinearAlgebra", "OffsetArrays", "Random", "Ratios", "Requires", "SharedArrays", "SparseArrays", "StaticArrays", "WoodburyMatrices"]
-git-tree-sha1 = "b7bc05649af456efc75d178846f47006c2c4c3c7"
-uuid = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
-version = "0.13.6"
 
 [[deps.InverseFunctions]]
 deps = ["Test"]
@@ -550,12 +447,6 @@ git-tree-sha1 = "3c837543ddb02250ef42f4738347454f95079d4e"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.3"
 
-[[deps.Kaleido_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "43032da5832754f58d14a91ffbe86d5f176acda9"
-uuid = "f7e6163d-2fa5-5f23-b69c-1db539e41963"
-version = "0.2.1+0"
-
 [[deps.LaTeXStrings]]
 git-tree-sha1 = "f2355693d6778a178ade15952b7ac47a4ff97996"
 uuid = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
@@ -586,12 +477,6 @@ version = "1.10.2+0"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
-
-[[deps.Libsharp]]
-deps = ["Libdl", "libsharp2_jll"]
-git-tree-sha1 = "e09051a3f95b83091fc9b7a26e6c585c6691b5bc"
-uuid = "ac8d63fe-4615-43ae-9860-9cd4a3820532"
-version = "0.2.0"
 
 [[deps.LinearAlgebra]]
 deps = ["Libdl", "libblastrampoline_jll"]
@@ -644,18 +529,6 @@ version = "2022.2.1"
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 version = "1.2.0"
 
-[[deps.NumericalIntegration]]
-deps = ["Interpolations", "LinearAlgebra", "Logging"]
-git-tree-sha1 = "2a4ef5fc235053f9747d59cfdee19bcb8ba1e833"
-uuid = "e7bfaba1-d571-5449-8927-abc22e82249b"
-version = "0.3.3"
-
-[[deps.OffsetArrays]]
-deps = ["Adapt"]
-git-tree-sha1 = "f71d8950b724e9ff6110fc948dff5a329f901d64"
-uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
-version = "1.12.8"
-
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
@@ -706,12 +579,6 @@ git-tree-sha1 = "56baf69781fc5e61607c3e46227ab17f7040ffa2"
 uuid = "a03496cd-edff-5a9b-9e67-9cda94a718b5"
 version = "0.8.19"
 
-[[deps.PlotlyKaleido]]
-deps = ["Base64", "JSON", "Kaleido_jll"]
-git-tree-sha1 = "64b125713e6ec1b5fac6ae1f9624b8b408ec9cb8"
-uuid = "f2990250-8cf9-495f-b13a-cce12b45703c"
-version = "1.0.0"
-
 [[deps.PlutoPlotly]]
 deps = ["AbstractPlutoDingetjes", "Colors", "Dates", "HypertextLiteral", "InteractiveUtils", "LaTeXStrings", "Markdown", "PlotlyBase", "PlutoUI", "Reexport"]
 git-tree-sha1 = "dec81dcd52748ffc59ce3582e709414ff78d947f"
@@ -759,12 +626,6 @@ uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 [[deps.Random]]
 deps = ["SHA", "Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-
-[[deps.Ratios]]
-deps = ["Requires"]
-git-tree-sha1 = "dc84268fe0e3335a62e315a3a7cf2afa7178a734"
-uuid = "c84ed2f1-dad5-54f0-aa8e-dbefe2724439"
-version = "0.4.3"
 
 [[deps.RecipesBase]]
 git-tree-sha1 = "6bf3f380ff52ce0832ddd3a2a7b9538ed1bcca7d"
@@ -817,17 +678,6 @@ deps = ["ChainRulesCore", "IrrationalConstants", "LogExpFunctions", "OpenLibm_jl
 git-tree-sha1 = "d75bda01f8c31ebb72df80a46c88b25d1c79c56d"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
 version = "2.1.7"
-
-[[deps.StaticArrays]]
-deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
-git-tree-sha1 = "f86b3a049e5d05227b10e15dbb315c5b90f14988"
-uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.5.9"
-
-[[deps.StaticArraysCore]]
-git-tree-sha1 = "6b7ba252635a5eff6a0b0664a41ee140a1c9e72a"
-uuid = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
-version = "1.4.0"
 
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -894,12 +744,6 @@ git-tree-sha1 = "b1be2855ed9ed8eac54e5caff2afcdb442d52c23"
 uuid = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
 version = "1.4.2"
 
-[[deps.WoodburyMatrices]]
-deps = ["LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "de67fa59e33ad156a590055375a30b23c40299d3"
-uuid = "efce3f68-66dc-5838-9240-27a6d6f5f9b6"
-version = "0.5.5"
-
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
@@ -909,12 +753,6 @@ version = "1.2.12+3"
 deps = ["Artifacts", "Libdl", "OpenBLAS_jll"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
 version = "5.1.1+0"
-
-[[deps.libsharp2_jll]]
-deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "9a7b8663b021ba776c89d9de7cdb2069cc27c00a"
-uuid = "180207a7-b08e-5162-af94-7d62a04fe081"
-version = "1.0.2+1"
 
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -928,32 +766,24 @@ version = "17.4.0+0"
 """
 
 # ╔═╡ Cell order:
+# ╟─01a81689-bcd2-400e-9495-fc6814517ff2
+# ╠═ed2bf741-2064-4341-8885-b9343e6b4bf4
+# ╟─bd626e67-9b83-4b15-a30f-e1360404b3cc
+# ╟─264b13b3-d021-4058-bf87-b56834e0e0e4
+# ╟─11c32721-fe02-460b-9893-caf3b6b90d0d
+# ╠═a4cf325a-41da-4462-b231-4931d2a8d453
+# ╟─6ce3fbb4-2e7e-41b6-951a-1b4e3e40fe59
+# ╠═a476f8c5-86f3-4095-ad91-f05e5fd56bcb
+# ╠═77ea52ba-b35b-49d5-b10d-4605505aa804
+# ╠═c2008296-86c0-4270-b455-c54b834a9c15
+# ╠═3e06fc95-5a5b-456a-8c12-eba22a57133e
 # ╠═bdf059d4-da94-4799-ac2d-cafe847f854a
-# ╠═332688ba-28d2-4f3d-b445-6d21fe22d8b5
-# ╟─eb6a8998-5de8-4023-9669-59807042f4cb
-# ╠═9d5e12da-2f4b-4896-b8ac-ba9e9577f3b6
-# ╠═5b65dc66-7e18-4f0e-bd4b-8b94100b332a
-# ╠═677ab4cf-b461-4974-9f14-fc5fe748341f
-# ╠═f64d33ad-0ad3-4565-a4d5-aa2344454537
-# ╠═9901697f-b34c-4a04-97db-4dfb7629a48d
-# ╠═7c5b985f-70aa-4e7f-9d13-a05ef8dc64c4
+# ╠═ffbbebe4-85bb-4637-a247-64fcca6af185
 # ╠═1be07d95-c5f2-46fa-8d8a-f87571cb7b24
 # ╠═e7c83f23-9596-422a-91fc-652be0cfd73f
-# ╠═9b0ea5fc-87b8-4dca-af4a-aed203cc4e9c
 # ╠═e708d208-1f32-4c91-91e1-779af992b443
-# ╠═b9c71123-0c0a-47d1-9dd3-3cda5fcdd7ff
-# ╠═945ed2b3-eec4-4002-9c69-e581407a6d6d
-# ╠═f2e08b0e-d1ce-498e-8a0e-78f7c6857aff
-# ╠═b42e13af-309e-4938-a03f-fb913bb747c0
-# ╟─e7f6daa9-9d66-493f-8d6f-d7d8cccc5dd2
 # ╠═9f893b60-98c5-4559-9de8-ead952c25092
-# ╠═5788e16a-3bd4-4b9f-8929-b9e06a30b6f2
-# ╠═33c409e5-df66-45bf-8eb4-5d3a52f99be9
-# ╠═a6f8585e-b3f7-42f4-b638-5821350c387e
-# ╟─6ce3fbb4-2e7e-41b6-951a-1b4e3e40fe59
+# ╠═02ed416b-3f1a-45e0-82a7-84bcd52461ab
 # ╠═71ffaefe-2441-11ed-24a9-5d47d1677675
-# ╠═74f22f41-769d-4eb2-98b0-e3891dda4701
-# ╠═43ef5993-f80b-4d60-bd4c-c2060f481684
-# ╠═f7f756b6-ffa1-4c76-b82a-dd44134a0596
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
