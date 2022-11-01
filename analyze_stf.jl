@@ -61,6 +61,11 @@ end
 # ╔═╡ 5b65dc66-7e18-4f0e-bd4b-8b94100b332a
 @bind flow Slider(range(0, stop=1, length=100), show_value=true, default=0.24)
 
+# ╔═╡ 7c5b985f-70aa-4e7f-9d13-a05ef8dc64c4
+# open("./example.pdf", "w") do io
+#     PlotlyKaleido.savefig(io, p.Plot, width=800, height=2000)
+# end
+
 # ╔═╡ 1be07d95-c5f2-46fa-8d8a-f87571cb7b24
 tgrid = range(-200, stop=200, length=801)
 
@@ -118,7 +123,7 @@ function plot_stf(ieq)
             legendgrouptitle_text=eq_names[ieq])
     end
     p = plot(scatter_plots, Layout(
-        width=500, height=200 + 20 * length(bins1),
+        width=650, height=400 + 20 * length(bins1),
         xaxis_title="Time Relative to PREM P (s)",
         template="none",
         yaxis_showgrid=false,
@@ -135,17 +140,6 @@ end
 
 # ╔═╡ 677ab4cf-b461-4974-9f14-fc5fe748341f
 p=plot_stf(1)
-
-# ╔═╡ f64d33ad-0ad3-4565-a4d5-aa2344454537
-Kaleido.savefig(p.Plot, "plot1.png")
-
-# ╔═╡ 9901697f-b34c-4a04-97db-4dfb7629a48d
-PlotlyBase.to_image(p.Plot, format="png")
-
-# ╔═╡ 7c5b985f-70aa-4e7f-9d13-a05ef8dc64c4
-open("./example.png", "w") do io
-    PlotlyBase.to_image(p.Plot)
-end
 
 # ╔═╡ 5788e16a-3bd4-4b9f-8929-b9e06a30b6f2
 bins[1][sortperm(parse.(Int, bins[1]))]
@@ -934,8 +928,6 @@ version = "17.4.0+0"
 # ╠═9d5e12da-2f4b-4896-b8ac-ba9e9577f3b6
 # ╠═5b65dc66-7e18-4f0e-bd4b-8b94100b332a
 # ╠═677ab4cf-b461-4974-9f14-fc5fe748341f
-# ╠═f64d33ad-0ad3-4565-a4d5-aa2344454537
-# ╠═9901697f-b34c-4a04-97db-4dfb7629a48d
 # ╠═7c5b985f-70aa-4e7f-9d13-a05ef8dc64c4
 # ╠═1be07d95-c5f2-46fa-8d8a-f87571cb7b24
 # ╠═e7c83f23-9596-422a-91fc-652be0cfd73f
