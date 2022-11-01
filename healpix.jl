@@ -11,6 +11,13 @@ begin
 	plotly()
 end
 
+# ╔═╡ 2bc8bc2d-ac93-43bd-bbc7-fbca0a8cef18
+
+df = CSV.File(
+    HTTP.get( "https://raw.githubusercontent.com/plotly/datasets/master/volcano_db.csv").body
+) |> DataFrame
+
+
 # ╔═╡ cb3c9b30-bf78-452d-ab4b-935b05347351
 md"""
 [see](https://github.com/ziotom78/Healpix.jl/blob/26798c25be0a7440ab1fc27606e0277badf13854/src/projections.jl)
@@ -41,20 +48,26 @@ mollweideproj(pix2angRing(Resolution(4), 192)...)
 colat, long = pix2angRing(Resolution(4), 96)
 
 
+# ╔═╡ c7cc3d86-80c6-48eb-bc2b-d9fa4140f0b2
+mollweideprojinv(0.5, 0.5)
+
+# ╔═╡ 60c499b2-fbcd-4ce9-ad8c-4a58cbbaeca6
+mollweideproj(0.654796, -1.8138)
+
 # ╔═╡ c515b58e-dc4d-4389-83c4-6d0574ad7c20
 rad2deg(long)
 
 # ╔═╡ 6052e1b4-6ed7-4591-bcbc-d9ed54503794
-rad2deg(colat)
+rad2deg(colat2lat(colat))
 
 # ╔═╡ f36dc859-8a49-48d2-95f5-6973cd96d904
 sinlat, coslat = sincos(colat2lat(colat))
 
 # ╔═╡ 39c999ba-63c1-4c2c-b760-48b2b971d59e
-y,x = (sinlat, long / pi * coslat)
+# y,x = (sinlat, long / 2 / pi * coslat)
 
 # ╔═╡ 7ae3595c-4f5a-4b82-9ea9-f4f473f0ab45
-# _, y, x =mollweideproj(, long)
+_, y, x =mollweideproj(colat2lat(colat), pi - long)
 
 # ╔═╡ 358d5912-665a-48d9-9e77-303cde047946
 begin
@@ -63,10 +76,13 @@ begin
 end
 
 # ╔═╡ 15e3e1ff-7bf2-41de-9386-ebcb08c00a59
-getj(y)=((y + 1) * (bmpheight) / 2) 
+# getj(y)=((y + 1) * (bmpheight) / 2) 
 
-# ╔═╡ c2306cc2-06b0-4634-8f51-16413c211be9
-geti(x)=((x + 1) * (bmpwidth) / 2)
+# ╔═╡ 045eea37-2a6c-4289-bb0b-e6ce02df4a82
+getj(y)=((y + 1) * (bmpheight - 1) / 2) + 1
+
+# ╔═╡ ffa83c51-9669-45ac-94a6-fb210d2347d5
+geti(x)=((x + 1) * (bmpwidth - 1) / 2) + 1
 
 # ╔═╡ 80615447-94d2-4725-8768-fcd54645d25a
 xxx, yyy = geti(x), getj(y)
@@ -74,8 +90,11 @@ xxx, yyy = geti(x), getj(y)
 # ╔═╡ 19ff01ac-544a-4dc3-ac6a-37c87f5202f1
 scatter!(p, [xxx], [yyy])
 
+# ╔═╡ c2306cc2-06b0-4634-8f51-16413c211be9
+# geti(x)=((x + 1) * (bmpwidth) / 2)
+
 # ╔═╡ baa27ae2-6303-4179-90da-c166ece527b5
-(x+1) 
+(x+1) (y + 1 * (bmpheight - 1) / 2) + 1
 
 # ╔═╡ e779b045-157e-4e87-b533-9d5a2bd93e1d
 typeof(m)
@@ -1063,6 +1082,7 @@ version = "1.4.1+0"
 
 # ╔═╡ Cell order:
 # ╠═a52932e4-5751-11ed-0f7f-81350a818436
+# ╠═2bc8bc2d-ac93-43bd-bbc7-fbca0a8cef18
 # ╠═cb3c9b30-bf78-452d-ab4b-935b05347351
 # ╠═956b7f6a-9188-4562-9c94-d8df6fcf9a65
 # ╠═af21aef9-e454-409b-827a-7337f576e0b6
@@ -1071,6 +1091,8 @@ version = "1.4.1+0"
 # ╠═9941ea4d-29b9-4dae-b62d-b26acf286a6f
 # ╠═19ff01ac-544a-4dc3-ac6a-37c87f5202f1
 # ╠═c9f92c1e-205d-4952-8e15-7f662502e588
+# ╠═c7cc3d86-80c6-48eb-bc2b-d9fa4140f0b2
+# ╠═60c499b2-fbcd-4ce9-ad8c-4a58cbbaeca6
 # ╠═c515b58e-dc4d-4389-83c4-6d0574ad7c20
 # ╠═6052e1b4-6ed7-4591-bcbc-d9ed54503794
 # ╠═f36dc859-8a49-48d2-95f5-6973cd96d904
@@ -1079,6 +1101,8 @@ version = "1.4.1+0"
 # ╠═358d5912-665a-48d9-9e77-303cde047946
 # ╠═80615447-94d2-4725-8768-fcd54645d25a
 # ╠═15e3e1ff-7bf2-41de-9386-ebcb08c00a59
+# ╠═045eea37-2a6c-4289-bb0b-e6ce02df4a82
+# ╠═ffa83c51-9669-45ac-94a6-fb210d2347d5
 # ╠═c2306cc2-06b0-4634-8f51-16413c211be9
 # ╠═baa27ae2-6303-4179-90da-c166ece527b5
 # ╠═e779b045-157e-4e87-b533-9d5a2bd93e1d

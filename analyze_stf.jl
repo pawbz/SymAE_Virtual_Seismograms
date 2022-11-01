@@ -17,6 +17,7 @@ end
 # ╔═╡ 71ffaefe-2441-11ed-24a9-5d47d1677675
 begin
     using PlutoPlotly
+	using PlotlyKaleido
     using FFTW
     using PlutoUI
     using CSV
@@ -34,7 +35,7 @@ end
 eqdata = DataFrame(CSV.File("data/events_list_12_oct.csv"))
 
 # ╔═╡ 332688ba-28d2-4f3d-b445-6d21fe22d8b5
-stf = h5open("data/stf_virtual_syn_12_oct.hdf5")
+stf = h5open("data/stf_virtual_syn_12_oct.hdf5");
 
 # ╔═╡ eb6a8998-5de8-4023-9669-59807042f4cb
 md"""
@@ -60,8 +61,16 @@ end
 # ╔═╡ 5b65dc66-7e18-4f0e-bd4b-8b94100b332a
 @bind flow Slider(range(0, stop=1, length=100), show_value=true, default=0.24)
 
+# ╔═╡ 7c5b985f-70aa-4e7f-9d13-a05ef8dc64c4
+# open("./example.pdf", "w") do io
+#     PlotlyKaleido.savefig(io, p.Plot, width=800, height=2000)
+# end
+
 # ╔═╡ 1be07d95-c5f2-46fa-8d8a-f87571cb7b24
 tgrid = range(-200, stop=200, length=801)
+
+# ╔═╡ e7c83f23-9596-422a-91fc-652be0cfd73f
+freqgrid = collect(rfftfreq(length(tgrid), inv(step(tgrid))))
 
 # ╔═╡ 9b0ea5fc-87b8-4dca-af4a-aed203cc4e9c
 function window(s)
@@ -91,21 +100,30 @@ function envelope(s)
     return abs.(hilbert(s))
 end
 
-# ╔═╡ 8aa9387e-c36e-41b3-a45d-e5baeb2b1578
-function ploteq(ieq)
+# ╔═╡ b42e13af-309e-4938-a03f-fb913bb747c0
+function get_stf(virtual_seismogram)
+	virtual_seismogram |> window |> lowpass_filter |> window |> normalize |> integrate |> window |> envelope
+end
+	
+
+# ╔═╡ e7f6daa9-9d66-493f-8d6f-d7d8cccc5dd2
+@warn "Note that there is a difference between python and julia bin healpix indexing."
+
+# ╔═╡ 9f893b60-98c5-4559-9de8-ead952c25092
+function plot_stf(ieq)
     bins1 = bins[ieq][sortperm(parse.(Int, bins[ieq]))]
     bin_indices = broadcast(x -> parse(Int, x), bins1)
-    tt = map(bin_indices) do bin
+    scatter_plots = map(bin_indices) do bin
         angles = broadcast(pix2angRing(Resolution(4), bin + 1)) do x
             floor(Int, rad2deg(x))
         end
         s = collect(stf[eq_names[ieq]][string(bin)]["virtual_seis"])
-        sout = s |> window |> lowpass_filter |> window |> normalize |> integrate |> window |> envelope
+        sout = get_stf(s)
         return scatter(x=tgrid, y=sout .+ (10 * (bin - minimum(bin_indices))), fill="tonexty", name=bin, text=vcat(fill(nothing, 50), string("    ", angles), fill(nothing, 800)), mode="lines+text", textposition="top",
             legendgrouptitle_text=eq_names[ieq])
     end
-    p = plot(tt, Layout(
-        width=500, height=200 + 20 * length(bins1),
+    p = plot(scatter_plots, Layout(
+        width=650, height=400 + 20 * length(bins1),
         xaxis_title="Time Relative to PREM P (s)",
         template="none",
         yaxis_showgrid=false,
@@ -121,7 +139,7 @@ function ploteq(ieq)
 end
 
 # ╔═╡ 677ab4cf-b461-4974-9f14-fc5fe748341f
-ploteq(1)
+p=plot_stf(1)
 
 # ╔═╡ 5788e16a-3bd4-4b9f-8929-b9e06a30b6f2
 bins[1][sortperm(parse.(Int, bins[1]))]
@@ -152,22 +170,6 @@ pix2angRing(Resolution(4), 192)
 # ╔═╡ 43ef5993-f80b-4d60-bd4c-c2060f481684
 pix2angRing(Resolution(4), 192)
 
-# ╔═╡ 317001fb-12b0-4d61-b417-3bea0d1eb7a8
-function plot_spectra()
-    f = Figure()
-    tgrid = range(-200, stop=200, length=801)
-
-    Axis(f[1, 1], yscale=log10, xscale=log10)
-
-    xs = rfftfreq(length(tgrid), inv(step(tgrid)))[2:end]
-    for eq in eq_names, ii in i
-        lines!(xs, spec[eq][ii][2:end], label=string(eq, " bin ", ii), linewidth=3)
-    end
-    axislegend(; position=:rt)
-    limits!(0.01, 1, 0.1, 1000) # x1, x2, y1, y2
-    f
-end
-
 # ╔═╡ f7f756b6-ffa1-4c76-b82a-dd44134a0596
 begin
     # isolate binindices from fnames as Int
@@ -196,27 +198,6 @@ begin
     end
 end
 
-# ╔═╡ 95be8ca3-ecb3-4499-a6ed-7e9770578e7e
-function plot_stf()
-    tgrid = range(-200, stop=200, length=801)
-    months = ["January", "February", "March", "April",
-        "May", "June", "July", "August", "September",
-        "October", "November", "December"]
-
-    f = Figure()
-    Axis(f[1, 1], title="Source Time Function", aspect=4)
-    for (ieq, eq) in enumerate(eq_names)
-        for (ibin, bin) in enumerate(bins[ieq])
-            s = load(eq_names[ieq], bins[ieq][ibin])
-            # lines!(tgrid, s, label=string(" bin ", ibin), linewidth = 3)
-            lines!(tgrid, abs.(hilbert(s)), linewidth=3, label=string(eq, " bin ", bin))
-        end
-    end
-    axislegend(; position=:rt)
-    f
-end
-
-
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -229,6 +210,7 @@ HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 Healpix = "9f4e344d-96bc-545a-84a3-ae6b9e1b672b"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 NumericalIntegration = "e7bfaba1-d571-5449-8927-abc22e82249b"
+PlotlyKaleido = "f2990250-8cf9-495f-b13a-cce12b45703c"
 PlutoPlotly = "8e989ff0-3d88-8e9f-f020-2b208a939ff0"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
@@ -243,6 +225,7 @@ HDF5 = "~0.16.12"
 Healpix = "~4.1.2"
 JLD2 = "~0.4.22"
 NumericalIntegration = "~0.3.3"
+PlotlyKaleido = "~1.0.0"
 PlutoPlotly = "~0.3.6"
 PlutoUI = "~0.7.39"
 """
@@ -253,7 +236,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "f59893a8e11bd68db1efe651c6fd5bb7f9cc0c22"
+project_hash = "4ba458f91782847637289e74c9e37ed81f5a5c13"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -561,6 +544,12 @@ git-tree-sha1 = "3c837543ddb02250ef42f4738347454f95079d4e"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.3"
 
+[[deps.Kaleido_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "43032da5832754f58d14a91ffbe86d5f176acda9"
+uuid = "f7e6163d-2fa5-5f23-b69c-1db539e41963"
+version = "0.2.1+0"
+
 [[deps.LaTeXStrings]]
 git-tree-sha1 = "f2355693d6778a178ade15952b7ac47a4ff97996"
 uuid = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
@@ -710,6 +699,12 @@ deps = ["ColorSchemes", "Dates", "DelimitedFiles", "DocStringExtensions", "JSON"
 git-tree-sha1 = "56baf69781fc5e61607c3e46227ab17f7040ffa2"
 uuid = "a03496cd-edff-5a9b-9e67-9cda94a718b5"
 version = "0.8.19"
+
+[[deps.PlotlyKaleido]]
+deps = ["Base64", "JSON", "Kaleido_jll"]
+git-tree-sha1 = "64b125713e6ec1b5fac6ae1f9624b8b408ec9cb8"
+uuid = "f2990250-8cf9-495f-b13a-cce12b45703c"
+version = "1.0.0"
 
 [[deps.PlutoPlotly]]
 deps = ["AbstractPlutoDingetjes", "Colors", "Dates", "HypertextLiteral", "InteractiveUtils", "LaTeXStrings", "Markdown", "PlotlyBase", "PlutoUI", "Reexport"]
@@ -933,22 +928,24 @@ version = "17.4.0+0"
 # ╠═9d5e12da-2f4b-4896-b8ac-ba9e9577f3b6
 # ╠═5b65dc66-7e18-4f0e-bd4b-8b94100b332a
 # ╠═677ab4cf-b461-4974-9f14-fc5fe748341f
+# ╠═7c5b985f-70aa-4e7f-9d13-a05ef8dc64c4
 # ╠═1be07d95-c5f2-46fa-8d8a-f87571cb7b24
+# ╠═e7c83f23-9596-422a-91fc-652be0cfd73f
 # ╠═9b0ea5fc-87b8-4dca-af4a-aed203cc4e9c
 # ╠═e708d208-1f32-4c91-91e1-779af992b443
 # ╠═b9c71123-0c0a-47d1-9dd3-3cda5fcdd7ff
 # ╠═945ed2b3-eec4-4002-9c69-e581407a6d6d
 # ╠═f2e08b0e-d1ce-498e-8a0e-78f7c6857aff
-# ╠═8aa9387e-c36e-41b3-a45d-e5baeb2b1578
+# ╠═b42e13af-309e-4938-a03f-fb913bb747c0
+# ╟─e7f6daa9-9d66-493f-8d6f-d7d8cccc5dd2
+# ╠═9f893b60-98c5-4559-9de8-ead952c25092
 # ╠═5788e16a-3bd4-4b9f-8929-b9e06a30b6f2
 # ╠═33c409e5-df66-45bf-8eb4-5d3a52f99be9
-# ╠═95be8ca3-ecb3-4499-a6ed-7e9770578e7e
 # ╠═a6f8585e-b3f7-42f4-b638-5821350c387e
 # ╟─6ce3fbb4-2e7e-41b6-951a-1b4e3e40fe59
 # ╠═71ffaefe-2441-11ed-24a9-5d47d1677675
 # ╠═74f22f41-769d-4eb2-98b0-e3891dda4701
 # ╠═43ef5993-f80b-4d60-bd4c-c2060f481684
-# ╠═317001fb-12b0-4d61-b417-3bea0d1eb7a8
 # ╠═f7f756b6-ffa1-4c76-b82a-dd44134a0596
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
