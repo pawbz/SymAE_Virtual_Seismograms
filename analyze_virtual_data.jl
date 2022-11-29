@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.14
+# v0.19.15
 
 using Markdown
 using InteractiveUtils
@@ -20,6 +20,7 @@ begin
     using FFTW
     using PlutoUI
     using CSV
+	using PlutoTeachingTools
     using DataFrames
     using DSP
     using Statistics
@@ -27,20 +28,28 @@ begin
     using HDF5
 end
 
+# ╔═╡ 0ae12f40-67d7-4507-bedd-d9083edb9127
+ChooseDisplayMode()
+
+# ╔═╡ 6e3e2f23-6223-4b5d-ae1b-ba0d924ecda9
+TableOfContents()
+
 # ╔═╡ 01a81689-bcd2-400e-9495-fc6814517ff2
 md"""
-# Redatuming to Generate Virtual Seismograms
+# Four earthquake-receiver pairs
 """
 
-# ╔═╡ 11c32721-fe02-460b-9893-caf3b6b90d0d
-md"""
-* Dotted Seismograms are Real
-* Rest are Virtual
+# ╔═╡ 9933486a-51dd-4852-97f7-7a3fe88ae013
+md"""# Virtual seismograms!
+#### Dotted Seismograms => Real; Solid Seismograms => Virtual
 """
+
+# ╔═╡ b6e8fdd0-4105-4942-9609-2a863ef0895a
+PlutoUI.LocalResource("eq_symae_summary.png")
 
 # ╔═╡ 6ce3fbb4-2e7e-41b6-951a-1b4e3e40fe59
 md"""
-## Appendix
+# Appendix
 """
 
 # ╔═╡ 77ea52ba-b35b-49d5-b10d-4605505aa804
@@ -54,22 +63,19 @@ end;
 # ╔═╡ c2008296-86c0-4270-b455-c54b834a9c15
 path_names = ["From Chile To 1A.CORRE", "From Fiji To AU.KELC", "From Okhotsk To II.MSEY", "From Bonin To IC.HIA", "Synthetic PREM P Arrival"]
 
-# ╔═╡ bd626e67-9b83-4b15-a30f-e1360404b3cc
-md"""
-#### Select paths
-$(@bind selected_paths
-MultiCheckBox(path_names, default=["From Chile To 1A.CORRE", "Synthetic PREM P Arrival"], select_all=true, orientation=:column)
-)"""
-
 # ╔═╡ 3e06fc95-5a5b-456a-8c12-eba22a57133e
 eq_full_names=Dict(["Chl1_8"=>"Chile; Bin 8; Mw 8.8; 2010", "Chl1_17"=>"Chile; Bin 17; Mw 8.8; 2010", "fij1_34"=>"Fiji; Bin 34; Mw 8.2; 2018","Hnd1_12"=>"Hindukush; Bin 12; Mw 7.5; 2015","Okt5_21"=>"Okhotsk; Bin 21; Mw 6.7; 2013","nzd_0"=>"New Zealand; Bin 0; Mw 7.8; 2016", "Bon1_70"=>"Bonin; Bin 70; Mw 7.8; 2015","Rat_4"=>"Rat Island; Bin 4; Mw 7.9; 2014", "Dnl_10"=>"Denali; Bin 10; Mw 7.9; 2002","Dnl_16"=>"Denali; Bin 16; Mw 7.9; 2002"])
 
-# ╔═╡ 264b13b3-d021-4058-bf87-b56834e0e0e4
-md"""
+# ╔═╡ bd626e67-9b83-4b15-a30f-e1360404b3cc
+TwoColumn(md"""
+#### Select paths
+$(@bind selected_paths
+MultiCheckBox(path_names, default=["From Chile To 1A.CORRE", "Synthetic PREM P Arrival"], select_all=true, orientation=:column)
+)""",  md"""
 #### Select quakes
 $(@bind selected_eq_names
 MultiCheckBox(collect(eq_full_names), default=["Chl1_8", "Okt5_21"], select_all=true)
-)"""
+)""")
 
 # ╔═╡ bdf059d4-da94-4799-ac2d-cafe847f854a
 eqdata = DataFrame(CSV.File("data/events_list_12_oct.csv"));
@@ -155,6 +161,7 @@ FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 PlutoPlotly = "8e989ff0-3d88-8e9f-f020-2b208a939ff0"
+PlutoTeachingTools = "661c6b06-c737-4d37-b85c-46df65de6f69"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
@@ -166,6 +173,7 @@ FFTW = "~1.5.0"
 HDF5 = "~0.16.12"
 JLD2 = "~0.4.22"
 PlutoPlotly = "~0.3.6"
+PlutoTeachingTools = "~0.2.5"
 PlutoUI = "~0.7.39"
 """
 
@@ -175,7 +183,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "2136007ca2177d5da4bacf0d84a3b3502743af92"
+project_hash = "0c26f336b1cc0f79e7d29cb83e9a6e92a4cf77b6"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -216,6 +224,12 @@ deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
 git-tree-sha1 = "38f7a08f19d8810338d4f5085211c7dfa5d5bdd8"
 uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
 version = "0.1.4"
+
+[[deps.CodeTracking]]
+deps = ["InteractiveUtils", "UUIDs"]
+git-tree-sha1 = "cc4bd91eba9cdbbb4df4746124c22c0832a460d6"
+uuid = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
+version = "1.1.1"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -447,10 +461,22 @@ git-tree-sha1 = "3c837543ddb02250ef42f4738347454f95079d4e"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.3"
 
+[[deps.JuliaInterpreter]]
+deps = ["CodeTracking", "InteractiveUtils", "Random", "UUIDs"]
+git-tree-sha1 = "a79c4cf60cc7ddcdcc70acbb7216a5f9b4f8d188"
+uuid = "aa1ae85d-cabe-5617-a682-6adf51b2e16a"
+version = "0.9.16"
+
 [[deps.LaTeXStrings]]
 git-tree-sha1 = "f2355693d6778a178ade15952b7ac47a4ff97996"
 uuid = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 version = "1.3.0"
+
+[[deps.Latexify]]
+deps = ["Formatting", "InteractiveUtils", "LaTeXStrings", "MacroTools", "Markdown", "OrderedCollections", "Printf", "Requires"]
+git-tree-sha1 = "ab9aa169d2160129beb241cb2750ca499b4e90e9"
+uuid = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
+version = "0.15.17"
 
 [[deps.LazyArtifacts]]
 deps = ["Artifacts", "Pkg"]
@@ -490,6 +516,12 @@ version = "0.3.18"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
+
+[[deps.LoweredCodeUtils]]
+deps = ["JuliaInterpreter"]
+git-tree-sha1 = "dedbebe234e06e1ddad435f5c6f4b85cd8ce55f7"
+uuid = "6f1432cf-f94c-5a45-995e-cdbf5db27b0b"
+version = "2.2.2"
 
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg"]
@@ -579,11 +611,29 @@ git-tree-sha1 = "56baf69781fc5e61607c3e46227ab17f7040ffa2"
 uuid = "a03496cd-edff-5a9b-9e67-9cda94a718b5"
 version = "0.8.19"
 
+[[deps.PlutoHooks]]
+deps = ["InteractiveUtils", "Markdown", "UUIDs"]
+git-tree-sha1 = "072cdf20c9b0507fdd977d7d246d90030609674b"
+uuid = "0ff47ea0-7a50-410d-8455-4348d5de0774"
+version = "0.0.5"
+
+[[deps.PlutoLinks]]
+deps = ["FileWatching", "InteractiveUtils", "Markdown", "PlutoHooks", "Revise", "UUIDs"]
+git-tree-sha1 = "8f5fa7056e6dcfb23ac5211de38e6c03f6367794"
+uuid = "0ff47ea0-7a50-410d-8455-4348d5de0420"
+version = "0.1.6"
+
 [[deps.PlutoPlotly]]
 deps = ["AbstractPlutoDingetjes", "Colors", "Dates", "HypertextLiteral", "InteractiveUtils", "LaTeXStrings", "Markdown", "PlotlyBase", "PlutoUI", "Reexport"]
 git-tree-sha1 = "dec81dcd52748ffc59ce3582e709414ff78d947f"
 uuid = "8e989ff0-3d88-8e9f-f020-2b208a939ff0"
 version = "0.3.6"
+
+[[deps.PlutoTeachingTools]]
+deps = ["Downloads", "HypertextLiteral", "LaTeXStrings", "Latexify", "Markdown", "PlutoLinks", "PlutoUI", "Random"]
+git-tree-sha1 = "ea3e4ac2e49e3438815f8946fa7673b658e35bdb"
+uuid = "661c6b06-c737-4d37-b85c-46df65de6f69"
+version = "0.2.5"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "UUIDs"]
@@ -642,6 +692,12 @@ deps = ["UUIDs"]
 git-tree-sha1 = "838a3a4188e2ded87a4f9f184b4b0d78a1e91cb7"
 uuid = "ae029012-a4dd-5104-9daa-d747884805df"
 version = "1.3.0"
+
+[[deps.Revise]]
+deps = ["CodeTracking", "Distributed", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "Pkg", "REPL", "Requires", "UUIDs", "Unicode"]
+git-tree-sha1 = "dad726963ecea2d8a81e26286f625aee09a91b7c"
+uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
+version = "3.4.0"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
@@ -766,12 +822,14 @@ version = "17.4.0+0"
 """
 
 # ╔═╡ Cell order:
+# ╠═0ae12f40-67d7-4507-bedd-d9083edb9127
+# ╠═6e3e2f23-6223-4b5d-ae1b-ba0d924ecda9
 # ╟─01a81689-bcd2-400e-9495-fc6814517ff2
 # ╠═ed2bf741-2064-4341-8885-b9343e6b4bf4
+# ╟─9933486a-51dd-4852-97f7-7a3fe88ae013
 # ╟─bd626e67-9b83-4b15-a30f-e1360404b3cc
-# ╟─264b13b3-d021-4058-bf87-b56834e0e0e4
-# ╟─11c32721-fe02-460b-9893-caf3b6b90d0d
-# ╠═a4cf325a-41da-4462-b231-4931d2a8d453
+# ╟─a4cf325a-41da-4462-b231-4931d2a8d453
+# ╟─b6e8fdd0-4105-4942-9609-2a863ef0895a
 # ╟─6ce3fbb4-2e7e-41b6-951a-1b4e3e40fe59
 # ╠═a476f8c5-86f3-4095-ad91-f05e5fd56bcb
 # ╠═77ea52ba-b35b-49d5-b10d-4605505aa804
