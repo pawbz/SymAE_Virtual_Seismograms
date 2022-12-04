@@ -14,6 +14,9 @@ macro bind(def, element)
     end
 end
 
+# ╔═╡ 4895a8f7-efea-437e-b046-89c56f6a3c67
+using ContinuousWavelets, Wavelets
+
 # ╔═╡ 71ffaefe-2441-11ed-24a9-5d47d1677675
 begin
     using PlutoPlotly
@@ -50,6 +53,12 @@ md"""
 $(@bind eq_names
 MultiCheckBox(eqdata[!, "Code"], default=["okt1"])
 )"""
+
+# ╔═╡ c7af0751-9004-40e5-b0c8-4ae7c55117e3
+md"""
+Spectrogram bin: $(@bind spectrogram_bin Slider(keys(stf[eq_names[1]])[sortperm(parse.(Int, keys(stf[eq_names[1]])))], show_value=true))
+"""
+
 
 # ╔═╡ 9d5e12da-2f4b-4896-b8ac-ba9e9577f3b6
 @bind bins PlutoUI.combine() do Child
@@ -160,6 +169,30 @@ begin
     fig
 end
 
+# ╔═╡ 5633826c-484c-4089-8175-449551ab3c4d
+function plot_cwt_stf()
+
+	f = collect(stf[eq_names[1]][string(spectrogram_bin)]["virtual_seis"]);
+	
+	c = wavelet(Morlet(pi/2), averagingType=NoAve(), β=2);
+	# c = wavelet(Dog{1}(), averagingType=NoAve(), β=1);
+	cwt_stf = ContinuousWavelets.cwt(f, c)
+
+
+
+	fig = PlutoPlotly.Plot(Layout(height=400, width=700, Subplots(shared_xaxes=true, rows=2, cols=1, subplot_titles=["Virtual Seismogram" "CWT"])))
+    add_trace!(fig, heatmap(x=tgrid, z=abs.(cwt_stf)'), row=2, col=1)
+    add_trace!(fig, scatter(y=f, x=tgrid), row=1, col=1)
+
+	  return PlutoPlotly.plot(fig)
+end
+
+# ╔═╡ f5ab5b34-eeb6-4978-9420-39e1f5a2eee2
+plot_cwt_stf()
+
+# ╔═╡ 924bf468-dbe7-4088-a9a7-2af3dfa0562d
+
+
 # ╔═╡ 6ce3fbb4-2e7e-41b6-951a-1b4e3e40fe59
 md"""
 ## Appendix
@@ -224,6 +257,7 @@ end
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+ContinuousWavelets = "96eb917e-2868-4417-9cb6-27e7ff17528f"
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
@@ -237,9 +271,11 @@ PlutoPlotly = "8e989ff0-3d88-8e9f-f020-2b208a939ff0"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 SignalAnalysis = "df1fea92-c066-49dd-8b36-eace3378ea47"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+Wavelets = "29a6e085-ba6d-5f35-a997-948ac2efa89a"
 
 [compat]
 CSV = "~0.10.4"
+ContinuousWavelets = "~1.1.2"
 DSP = "~0.7.7"
 DataFrames = "~1.3.4"
 FFTW = "~1.5.0"
@@ -252,6 +288,7 @@ PlotlyKaleido = "~1.0.0"
 PlutoPlotly = "~0.3.6"
 PlutoUI = "~0.7.39"
 SignalAnalysis = "~0.4.1"
+Wavelets = "~0.9.5"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -260,7 +297,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "faf5b7c583d16fb601db68a742d661615c33b655"
+project_hash = "74e19dd4f5bf224f55aaba3e6e837b1517151ada"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -378,6 +415,12 @@ deps = ["LinearAlgebra"]
 git-tree-sha1 = "fb21ddd70a051d882a1686a5a550990bbe371a95"
 uuid = "187b0558-2788-49d3-abe0-74a17ed4e7c9"
 version = "1.4.1"
+
+[[deps.ContinuousWavelets]]
+deps = ["AbstractFFTs", "FFTW", "Interpolations", "LinearAlgebra", "SpecialFunctions", "Wavelets"]
+git-tree-sha1 = "c1808d31e107c23331c2068ae7f321f65b70a370"
+uuid = "96eb917e-2868-4417-9cb6-27e7ff17528f"
+version = "1.1.2"
 
 [[deps.Crayons]]
 git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
@@ -1042,6 +1085,12 @@ git-tree-sha1 = "7e7e1b4686995aaf4ecaaf52f6cd824fa6bd6aa5"
 uuid = "8149f6b0-98f6-5db9-b78f-408fbbb8ef88"
 version = "1.2.0"
 
+[[deps.Wavelets]]
+deps = ["DSP", "FFTW", "LinearAlgebra", "Reexport", "SpecialFunctions", "Statistics"]
+git-tree-sha1 = "58f7491c21ab2b1d69368c7f7e8a6a93cbf8b7bf"
+uuid = "29a6e085-ba6d-5f35-a997-948ac2efa89a"
+version = "0.9.5"
+
 [[deps.WeakRefStrings]]
 deps = ["DataAPI", "InlineStrings", "Parsers"]
 git-tree-sha1 = "b1be2855ed9ed8eac54e5caff2afcdb442d52c23"
@@ -1084,6 +1133,8 @@ version = "17.4.0+0"
 # ╔═╡ Cell order:
 # ╠═adba76b2-d470-4824-a289-21cf8d2b5813
 # ╟─2c4afc82-5889-452a-b051-9b832ee23e47
+# ╟─c7af0751-9004-40e5-b0c8-4ae7c55117e3
+# ╠═f5ab5b34-eeb6-4978-9420-39e1f5a2eee2
 # ╠═677ab4cf-b461-4974-9f14-fc5fe748341f
 # ╠═bdf059d4-da94-4799-ac2d-cafe847f854a
 # ╠═332688ba-28d2-4f3d-b445-6d21fe22d8b5
@@ -1102,6 +1153,9 @@ version = "17.4.0+0"
 # ╟─e7f6daa9-9d66-493f-8d6f-d7d8cccc5dd2
 # ╠═9f893b60-98c5-4559-9de8-ead952c25092
 # ╠═a6f8585e-b3f7-42f4-b638-5821350c387e
+# ╠═4895a8f7-efea-437e-b046-89c56f6a3c67
+# ╠═5633826c-484c-4089-8175-449551ab3c4d
+# ╠═924bf468-dbe7-4088-a9a7-2af3dfa0562d
 # ╟─6ce3fbb4-2e7e-41b6-951a-1b4e3e40fe59
 # ╠═7f6c6656-d6cd-4c6f-a329-4d966db67ac2
 # ╠═71ffaefe-2441-11ed-24a9-5d47d1677675
