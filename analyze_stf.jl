@@ -45,6 +45,11 @@ TableOfContents()
 # ╔═╡ 2c4afc82-5889-452a-b051-9b832ee23e47
 md"# Learning earthquake source time functions via redatuming"
 
+# ╔═╡ eb6a8998-5de8-4023-9669-59807042f4cb
+md"""
+#### Select quakes
+"""
+
 # ╔═╡ c57a0b22-6102-4a24-93af-379ed11f77be
 md"""# CWT
 """
@@ -58,12 +63,8 @@ md"# Appendix"
 # ╔═╡ bdf059d4-da94-4799-ac2d-cafe847f854a
 eqdata = DataFrame(CSV.File("data/events_list_12_oct.csv"))
 
-# ╔═╡ eb6a8998-5de8-4023-9669-59807042f4cb
-md"""
-#### Select quakes
-$(@bind eq_names
-MultiCheckBox(eqdata[!, "Code"], default=["okt1"])
-)"""
+# ╔═╡ d57677dc-19b6-4621-96ee-123cceb1496e
+@bind eq_names confirm(MultiCheckBox(eqdata[!, "Code"], default=["okt1"], select_all=true,))
 
 # ╔═╡ 332688ba-28d2-4f3d-b445-6d21fe22d8b5
 stf = h5open("data/stf_virtual_syn_pb10s.hdf5");
@@ -74,19 +75,22 @@ Select spectrogram bin for $(eq_names[1]): $(@bind spectrogram_bin Slider(keys(s
 """
 
 
+# ╔═╡ c40ccede-2d13-4669-9d7d-2b40e9f4526f
+rand(keys(stf["okt1"]), 5)
+
 # ╔═╡ 9d5e12da-2f4b-4896-b8ac-ba9e9577f3b6
-@bind bins PlutoUI.combine() do Child
+@bind bins confirm(PlutoUI.combine() do Child
     components = ["x", "y", "z"]
     s = [md"""
       earthquake: $eq $(
-      	Child(MultiCheckBox(keys(stf[eq]), select_all=true, default=keys(stf[eq])))
+      	Child(MultiCheckBox(keys(stf[eq]), select_all=true, default=rand(keys(stf[eq]),1)))
       	)""" for eq in eq_names]
 
     md"""
     #### Select Bins
     $(s)
     """
-end
+end)
 
 # ╔═╡ 5b65dc66-7e18-4f0e-bd4b-8b94100b332a
 @bind flow Slider(range(0, stop=1, length=100), show_value=true, default=0.24)
@@ -153,7 +157,14 @@ function plot_energyrise()
     end
 
     p = plot(vcat(scatter_plots...), Layout(
-        width=650, height=400,
+		legend=attr(
+        x=1,
+        y=1.02,
+        yanchor="bottom",
+        xanchor="right",
+        orientation="h"
+		),
+        width=650, height=500,
         xaxis_title="Time Relative to PREM P (s)",
         template="none",
         yaxis_showgrid=false,
@@ -1319,9 +1330,11 @@ version = "17.4.0+0"
 # ╠═adba76b2-d470-4824-a289-21cf8d2b5813
 # ╟─2c4afc82-5889-452a-b051-9b832ee23e47
 # ╟─eb6a8998-5de8-4023-9669-59807042f4cb
+# ╟─d57677dc-19b6-4621-96ee-123cceb1496e
 # ╟─c57a0b22-6102-4a24-93af-379ed11f77be
 # ╟─c7af0751-9004-40e5-b0c8-4ae7c55117e3
 # ╠═f5ab5b34-eeb6-4978-9420-39e1f5a2eee2
+# ╠═c40ccede-2d13-4669-9d7d-2b40e9f4526f
 # ╟─d66c3edd-5a9d-4acf-ac8d-de51483f24df
 # ╟─9d5e12da-2f4b-4896-b8ac-ba9e9577f3b6
 # ╠═677ab4cf-b461-4974-9f14-fc5fe748341f
