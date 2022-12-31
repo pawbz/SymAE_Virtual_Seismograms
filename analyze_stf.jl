@@ -57,6 +57,17 @@ md"""# CWT
 # ╔═╡ d66c3edd-5a9d-4acf-ac8d-de51483f24df
 md"# Envelope"
 
+# ╔═╡ 5a187589-73e9-4e9f-b814-065a0db430b5
+
+
+# ╔═╡ 25c4170d-c52d-429c-8e78-442027e35781
+md"""
+# Energy Rise
+Would you like to take mean over all bins?
+
+$(@bind avg_over_bins Select([true => "Yes", false => "No"]))
+"""
+
 # ╔═╡ 8c3230fc-85eb-4c1a-8c26-9d88b82d1b95
 md"# Appendix"
 
@@ -74,9 +85,6 @@ md"""
 Select spectrogram bin for $(eq_names[1]): $(@bind spectrogram_bin Slider(keys(stf[eq_names[1]])[sortperm(parse.(Int, keys(stf[eq_names[1]])))], show_value=true))
 """
 
-
-# ╔═╡ c40ccede-2d13-4669-9d7d-2b40e9f4526f
-rand(keys(stf["okt1"]), 5)
 
 # ╔═╡ 9d5e12da-2f4b-4896-b8ac-ba9e9577f3b6
 @bind bins confirm(PlutoUI.combine() do Child
@@ -135,35 +143,66 @@ function get_stf(virtual_seismogram)
 end
 
 
+# ╔═╡ 496ad4f7-54fa-4183-9151-6c7546451990
+stf_energy_cumsum = map(stf) do s
+    mean(map(s) do sb
+        ss = collect(sb["virtual_seis"])
+        return cumsum(abs2.(ss ./ norm(ss, 2)))
+    end)
+end
+
 # ╔═╡ e7f6daa9-9d66-493f-8d6f-d7d8cccc5dd2
 @warn "Note that there is a difference between python and julia bin healpix indexing."
 
+# ╔═╡ d70a130a-5ed0-4c8d-bd5f-34a5ef7dca32
+all_bins = [keys(stf[eq]) for eq in eq_names];
+
+# ╔═╡ 3db67b6e-e1be-4309-8ccf-7f024cf7a5d3
+# collect sorted bins of all earthquakes
+all_sorted_bins = [all_bins[ieq][sortperm(parse.(Int, all_bins[ieq]))] for ieq in 1:length(eq_names)];
+
+# ╔═╡ 2cc04b6e-8e9b-4990-a6bd-3575b81d5f9f
+# collect sorted bins of all earthquakes
+sorted_bins = [bins[ieq][sortperm(parse.(Int, bins[ieq]))] for ieq in 1:length(eq_names)];
+
+# ╔═╡ 0b3a2252-6043-46e3-9f1b-6f071b756256
+sorted_bin_indices = [broadcast(x -> parse(Int, x), sorted_bins[ieq]) for ieq in 1:length(eq_names)];
+
+# ╔═╡ 943e472b-a1d4-47fb-82ef-b4bc14aa5136
+all_sorted_bin_indices = [broadcast(x -> parse(Int, x), all_sorted_bins[ieq]) for ieq in 1:length(eq_names)];
+
 # ╔═╡ f56a56ff-f415-4843-a08a-18ac9ecee1fc
 function plot_energyrise()
-    # collect sorted bins of all earthquakes
-    bins1 = [bins[ieq][sortperm(parse.(Int, bins[ieq]))] for ieq in 1:length(eq_names)]
-    # store sorted binindices
-    bin_indices = [broadcast(x -> parse(Int, x), bins1[ieq]) for ieq in 1:length(eq_names)]
+    if (avg_over_bins)
 
-    scatter_plots = map(enumerate(eq_names)) do (ieq, eq_name)
-        map(enumerate(bin_indices[ieq])) do (ibin, bin)
-            s = collect(stf[eq_names[ieq]][string(bin)]["virtual_seis"])
-            sout = cumsum(abs2.(s ./ norm(s, 2)))
-
-            return scatter(x=tgrid, y=sout, name=bin,
-                legendgroup=eq_names[ieq],
-                legendgrouptitle_text=eq_names[ieq])
+        scatter_plots = map(enumerate(eq_names)) do (ieq, eq_name)
+            # take mean of stf across all bins
+            splot = mean(map(enumerate(keys(stf[eq_name]))) do (ibin, bin)
+                s = window(collect(stf[eq_name][string(bin)]["virtual_seis"]))
+                return cumsum(abs2.(s ./ norm(s, 2)))
+            end)
+            return scatter(x=tgrid, y=splot, name=eq_names[ieq])
+        end
+    else
+        scatter_plots = map(enumerate(eq_names)) do (ieq, eq_name)
+            map(enumerate(sorted_bin_indices[ieq])) do (ibin, bin)
+                s = window(collect(stf[eq_name][string(bin)]["virtual_seis"]))
+                splot = cumsum(abs2.(s ./ norm(s, 2)))
+                return scatter(x=tgrid, y=splot, name=bin,
+                    legendgroup=eq_names[ieq],
+                    legendgrouptitle_text=eq_names[ieq])
+            end
         end
     end
 
     p = plot(vcat(scatter_plots...), Layout(
-		legend=attr(
-        x=1,
-        y=1.02,
-        yanchor="bottom",
-        xanchor="right",
-        orientation="h"
-		),
+        legend=attr(
+            x=1,
+            y=1.02,
+            yanchor="bottom",
+            xanchor="right",
+            orientation="h"
+        ),
         width=650, height=500,
         xaxis_title="Time Relative to PREM P (s)",
         template="none",
@@ -184,26 +223,25 @@ plot_energyrise()
 
 # ╔═╡ 9f893b60-98c5-4559-9de8-ead952c25092
 function plot_stf()
-    # collect sorted bins of all earthquakes
-    bins1 = [bins[ieq][sortperm(parse.(Int, bins[ieq]))] for ieq in 1:length(eq_names)]
-    # store sorted binindices
-    bin_indices = [broadcast(x -> parse(Int, x), bins1[ieq]) for ieq in 1:length(eq_names)]
-
     scatter_plots = map(enumerate(eq_names)) do (ieq, eq_name)
 
-        map(enumerate(bin_indices[ieq])) do (ibin, bin)
+        map(enumerate(sorted_bin_indices[ieq])) do (ibin, bin)
             angles = broadcast(pix2angRing(Resolution(4), bin + 1)) do x
                 floor(Int, rad2deg(x))
             end
             s = collect(stf[eq_names[ieq]][string(bin)]["virtual_seis"])
             sout = get_stf(s)
 
-            # add 10 per each stf, upto previous eq
-            previous_yoffset = sum(map(1:ieq-1) do iieq
-                return (10 * (length(bin_indices[iieq]) + 2))
-            end)
+            # add 10 per each stf, up to previous eq
+            if (ieq == 1)
+                previous_yoffset = 0
+            else
+                previous_yoffset = sum(map(1:ieq-1) do iieq
+                    return (10 * (length(sorted_bin_indices[iieq]) + 2))
+                end)
+            end
             # add 10 per each stf, for current eq
-            current_yoffset = (10 * (length(bin_indices[ieq][1:ibin]) - 1))
+            current_yoffset = (10 * (length(sorted_bin_indices[ieq][1:ibin]) - 1))
 
             return scatter(x=tgrid, y=sout .+ current_yoffset .+ previous_yoffset, fill="tonexty", name=bin, text=vcat(fill(nothing, 50), string("    ", angles), fill(nothing, 800)), mode="lines+text", textposition="top",
                 legendgroup=eq_names[ieq],
@@ -230,18 +268,6 @@ end
 # ╔═╡ 677ab4cf-b461-4974-9f14-fc5fe748341f
 plot_stf()
 
-# ╔═╡ a6f8585e-b3f7-42f4-b638-5821350c387e
-begin
-    fig = Figure()
-    ga = GeoAxis(
-        fig[1, 1]; # any cell of the figure's layout
-        dest="+proj=wintri", # the CRS in which you want to plot
-        coastlines=true # plot coastlines from Natural Earth, as a reference.
-    )
-    scatter!(ga, -120:15:120, -60:7.5:60; color=-60:7.5:60, strokecolor=(:black, 0.2))
-    fig
-end
-
 # ╔═╡ 5633826c-484c-4089-8175-449551ab3c4d
 function plot_cwt_stf()
 
@@ -262,6 +288,18 @@ end
 
 # ╔═╡ f5ab5b34-eeb6-4978-9420-39e1f5a2eee2
 plot_cwt_stf()
+
+# ╔═╡ a6f8585e-b3f7-42f4-b638-5821350c387e
+begin
+    fig = Figure()
+    ga = GeoAxis(
+        fig[1, 1]; # any cell of the figure's layout
+        dest="+proj=wintri", # the CRS in which you want to plot
+        coastlines=true # plot coastlines from Natural Earth, as a reference.
+    )
+    scatter!(ga, -120:15:120, -60:7.5:60; color=-60:7.5:60, strokecolor=(:black, 0.2))
+    fig
+end
 
 # ╔═╡ 7f6c6656-d6cd-4c6f-a329-4d966db67ac2
 md"""
@@ -1334,10 +1372,11 @@ version = "17.4.0+0"
 # ╟─c57a0b22-6102-4a24-93af-379ed11f77be
 # ╟─c7af0751-9004-40e5-b0c8-4ae7c55117e3
 # ╠═f5ab5b34-eeb6-4978-9420-39e1f5a2eee2
-# ╠═c40ccede-2d13-4669-9d7d-2b40e9f4526f
 # ╟─d66c3edd-5a9d-4acf-ac8d-de51483f24df
 # ╟─9d5e12da-2f4b-4896-b8ac-ba9e9577f3b6
 # ╠═677ab4cf-b461-4974-9f14-fc5fe748341f
+# ╠═5a187589-73e9-4e9f-b814-065a0db430b5
+# ╟─25c4170d-c52d-429c-8e78-442027e35781
 # ╠═e290dbf1-c0da-4619-9590-94271ed15aa4
 # ╟─8c3230fc-85eb-4c1a-8c26-9d88b82d1b95
 # ╠═bdf059d4-da94-4799-ac2d-cafe847f854a
@@ -1351,12 +1390,18 @@ version = "17.4.0+0"
 # ╠═945ed2b3-eec4-4002-9c69-e581407a6d6d
 # ╠═f2e08b0e-d1ce-498e-8a0e-78f7c6857aff
 # ╠═b42e13af-309e-4938-a03f-fb913bb747c0
+# ╠═496ad4f7-54fa-4183-9151-6c7546451990
 # ╟─e7f6daa9-9d66-493f-8d6f-d7d8cccc5dd2
+# ╠═d70a130a-5ed0-4c8d-bd5f-34a5ef7dca32
+# ╠═3db67b6e-e1be-4309-8ccf-7f024cf7a5d3
+# ╠═2cc04b6e-8e9b-4990-a6bd-3575b81d5f9f
+# ╠═0b3a2252-6043-46e3-9f1b-6f071b756256
+# ╠═943e472b-a1d4-47fb-82ef-b4bc14aa5136
 # ╠═f56a56ff-f415-4843-a08a-18ac9ecee1fc
 # ╠═9f893b60-98c5-4559-9de8-ead952c25092
-# ╠═a6f8585e-b3f7-42f4-b638-5821350c387e
 # ╠═5633826c-484c-4089-8175-449551ab3c4d
 # ╠═924bf468-dbe7-4088-a9a7-2af3dfa0562d
+# ╠═a6f8585e-b3f7-42f4-b638-5821350c387e
 # ╠═7f6c6656-d6cd-4c6f-a329-4d966db67ac2
 # ╠═71ffaefe-2441-11ed-24a9-5d47d1677675
 # ╠═74f22f41-769d-4eb2-98b0-e3891dda4701
