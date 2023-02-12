@@ -35,7 +35,7 @@ end
 eqdata = DataFrame(CSV.File("data/events_list_12_oct.csv"))
 
 # ╔═╡ 332688ba-28d2-4f3d-b445-6d21fe22d8b5
-stf = h5open("data/stf_virtual_syn_12_oct.hdf5");
+stf = h5open("data/stf_virtual_syn_pb10s.hdf5");
 
 # ╔═╡ ec520726-81b6-451b-a021-5413ef13453a
 spec = h5open("data/all_spectras_2.0.hdf5");
