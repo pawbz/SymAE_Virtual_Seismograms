@@ -5,10 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ aa8aa21c-6480-4d71-a55f-be4e98fe9dcc
-begin
-    using Pluto
-    using PlutoUI
-end
+using Pluto,PlutoUI
 
 # ╔═╡ 64625acb-b12e-4e95-b543-38d44b640e5d
 PlutoUI.LocalResource("./movies/virtual_data.gif", :width => 800, :autoplay => "", :loop => "")
