@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.15
+# v0.19.22
 
 using Markdown
 using InteractiveUtils
@@ -11,12 +11,7 @@ begin
 end
 
 # ╔═╡ 64625acb-b12e-4e95-b543-38d44b640e5d
-PlutoUI.LocalResource("./images/geophones_in_IISc.jpg", :width => 600)
-
-# ╔═╡ 1bb14878-b072-4dbf-b151-6ce26bb49d63
-md"""
-## References
-"""
+PlutoUI.LocalResource("./movies/virtual_data.gif", :width => 800, :autoplay => "", :loop => "")
 
 # ╔═╡ d2bf8d0f-9b1e-4625-b51a-eeb27b684ba8
 md"""
@@ -70,7 +65,7 @@ PlutoUI = "~0.7.43"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.2"
+julia_version = "1.8.5"
 manifest_format = "2.0"
 project_hash = "dd019c3e1b19dd30c61b961938e736d54ca8d6d5"
 
@@ -110,7 +105,7 @@ version = "0.11.4"
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "0.5.2+0"
+version = "1.0.1+0"
 
 [[deps.Configurations]]
 deps = ["ExproniconLite", "OrderedCollections", "TOML"]
@@ -462,10 +457,9 @@ version = "17.4.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─64625acb-b12e-4e95-b543-38d44b640e5d
 # ╟─7cede54e-5eed-4763-9689-09e2ab9eca92
+# ╟─64625acb-b12e-4e95-b543-38d44b640e5d
 # ╟─9fcd3f72-388c-11ed-12c5-dd984fa4f529
-# ╟─1bb14878-b072-4dbf-b151-6ce26bb49d63
 # ╟─d2bf8d0f-9b1e-4625-b51a-eeb27b684ba8
 # ╠═aa8aa21c-6480-4d71-a55f-be4e98fe9dcc
 # ╠═03ce0348-524c-4a76-a627-80b83208e68d

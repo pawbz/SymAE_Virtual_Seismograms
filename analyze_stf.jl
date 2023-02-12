@@ -219,7 +219,7 @@ function plot_energyrise()
 end
 
 # ╔═╡ e290dbf1-c0da-4619-9590-94271ed15aa4
-plot_energyrise()
+penergy = plot_energyrise()
 
 # ╔═╡ 9f893b60-98c5-4559-9de8-ead952c25092
 function plot_stf()
@@ -266,7 +266,7 @@ function plot_stf()
 end
 
 # ╔═╡ 677ab4cf-b461-4974-9f14-fc5fe748341f
-plot_stf()
+pstf = plot_stf()
 
 # ╔═╡ 5633826c-484c-4089-8175-449551ab3c4d
 function plot_cwt_stf()
@@ -287,7 +287,10 @@ function plot_cwt_stf()
 end
 
 # ╔═╡ f5ab5b34-eeb6-4978-9420-39e1f5a2eee2
-plot_cwt_stf()
+pcwt = plot_cwt_stf()
+
+# ╔═╡ 1a0f5073-a974-4056-93ca-efbd2a9dbee7
+savefig(pcwt.Plot, "test.pdf")
 
 # ╔═╡ a6f8585e-b3f7-42f4-b638-5821350c387e
 begin
@@ -1378,6 +1381,7 @@ version = "17.4.0+0"
 # ╠═5a187589-73e9-4e9f-b814-065a0db430b5
 # ╟─25c4170d-c52d-429c-8e78-442027e35781
 # ╠═e290dbf1-c0da-4619-9590-94271ed15aa4
+# ╠═1a0f5073-a974-4056-93ca-efbd2a9dbee7
 # ╟─8c3230fc-85eb-4c1a-8c26-9d88b82d1b95
 # ╠═bdf059d4-da94-4799-ac2d-cafe847f854a
 # ╠═332688ba-28d2-4f3d-b445-6d21fe22d8b5
